@@ -22,6 +22,11 @@ def noise_filter(column):
     return False
 
 def reduce_noise(multiple_seq_alignment):
+    """
+    reduce_noise is a function that filters all noisy columns.
+    :param multiple_seq_alignment: MultipleSeqAlignment.
+    :return: a MultipleSeqAlignment.
+    """
     noise_free_column_list = []
     new_aligned_list = []
     for i in range(my_sequence_recorded.get_alignment_length()):
