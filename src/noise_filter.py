@@ -40,6 +40,9 @@ def reduce_noise(multiple_seq_alignment):
      ])
 
 
+with open(s001_align, mode='r') as aligned_file:
+    my_sequence_recorded = AlignIO.read(aligned_file, 'fasta')
+
 if __name__ == '__main__':
 
     file_in = sys.argv[1]
