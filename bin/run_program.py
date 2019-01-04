@@ -55,14 +55,17 @@ def noise_filter(column):
     return False
 
 
-def reduce_noise(multiple_seq_alignment):
+def reduce_noise(multiple_seq_alignment, _alignment_path):
     """
-    reduce_noise is a function that filters all noisy columns using the function noise_filter.
+    reduce_noise is a function that filters all noisy columns.
     :param multiple_seq_alignment: MultipleSeqAlignment.
+    :param _alignment_path: msa path.
     :return: a MultipleSeqAlignment.
     """
     noise_free_column_list = []
     new_aligned_list = []
+    alignment_filename_ = _alignment_path.split('/')[-1]
+
     for i in range(multiple_seq_alignment.get_alignment_length()):
         if not noise_filter(multiple_seq_alignment[:, i]):
             noise_free_column_list.append(multiple_seq_alignment[:, i])
@@ -72,19 +75,27 @@ def reduce_noise(multiple_seq_alignment):
         SeqRecord.SeqRecord(Seq(new_seq), id=record.id, name=record.name, description=record.description)
         for new_seq, record in zip(new_aligned_list, multiple_seq_alignment)
      ])
-    return record_list_
+    noise_reduction_ratio_ = (multiple_seq_alignment.get_alignment_length()
+                    - record_list_.get_alignment_length()) / multiple_seq_alignment.get_alignment_length()
+
+    if multiple_seq_alignment.get_alignment_length() == record_list_.get_alignment_length():
+        print(f'{alignment_filename_}'+ '>> WARNING: no noise reduction')
+    if 0 < record_list_.get_alignment_length()  < multiple_seq_alignment.get_alignment_length() / 2:
+        print(f'{alignment_filename_}'+ '>> WARNING: more than 0.5 of the sequence is noise')
+    return record_list_, noise_reduction_ratio_
+
 
 
 def perform_noise_reduction(alignment_path_):
     """
-    perform_noise_reduction is a function that takes the parameter alignment path and applies 
+    perform_noise_reduction is a function that takes the parameter alignment path and applies
     the reduce_noise function.
     :param alignment_path_: msa path.
     :return: a MultipleSeqAlignment.
     """
     with open(alignment_path_, mode='r') as aligned_file:
         my_sequence_recorded = AlignIO.read(aligned_file, 'fasta')
-    return reduce_noise(my_sequence_recorded)
+    return reduce_noise(my_sequence_recorded, alignment_path_)
 
 
 def computing_and_writing_alignment_tree(msa_filename, tree_outfile_):
@@ -140,13 +151,16 @@ if __name__ == '__main__':
         sys.exit('WARNING: run_program do not require any input.')
     print('processing data...')
 
-    original_dir = './data/test_data'
-    reduced_dir = './data/reduced_test_data'
+    original_dir = './data/raw_data'
+    reduced_dir = './data/noise_reduced_data'
     result_dir = './results'
     directories = []
     tns = dendropy.TaxonNamespace()
 
     for folder in glob.glob(original_dir +'/*'):
+        if len(glob.glob(original_dir + '/*')) == 0:
+            sys.exit('empty data directory, please verify your data is on the right directory')
+
         sub_folder_name = folder.split('/')[-1]
         directories.append(sub_folder_name)
 
@@ -161,7 +175,7 @@ if __name__ == '__main__':
         os.makedirs(new_folder_path, exist_ok=True)
         original_dir_path = os.path.join(original_dir, directory)
         if len(glob.glob(original_dir_path + '/*')) == 0:
-            sys.exit('empty data directory, please verify your data is on the right directory')
+            sys.exit('empty data sub directory, please verify your data is on the right directory')
 
         reference_tree_path = glob.glob(original_dir_path +'/*.tree')[0]
         with open(reference_tree_path, mode='r') as ref_tree_file:
@@ -176,9 +190,13 @@ if __name__ == '__main__':
         compare_trees_dictionary[folder_dict_key_name] = dict()
 
         for alignment_path in glob.glob(original_dir_path + '/*.msl'):
+            if os.stat(alignment_path).st_size == 0:
+                sys.exit(f'{alignment_path}'+ '>> ERROR: empty msl file.')
             # performing noise reduction and writing the alignment
             # into the corresponding noise_reduction directory
-            record_list = perform_noise_reduction(alignment_path)
+            record_list, noise_reduction_ratio = perform_noise_reduction(alignment_path)
+            if record_list.get_alignment_length() == 0:
+                sys.exit(f'{alignment_path}'+ '>> WARNING: all columns are noisy.')
             reduced_alignment_name = alignment_path.split('/')[-1]
             reduced_filename_out = os.path.join(new_folder_path, reduced_alignment_name)
             AlignIO.write(record_list, reduced_filename_out, "fasta")
@@ -186,12 +204,18 @@ if __name__ == '__main__':
             # computing and writing noise reduced alignment trees
             tree_outfile_reduced = reduced_filename_out[:-3] + 'tree'
             computing_and_writing_alignment_tree(reduced_filename_out, tree_outfile_reduced)
+            if os.stat(tree_outfile_reduced).st_size == 0:
+                tree_file_name = tree_outfile_reduced.split('/')[-3:]
+                sys.exit(f'{tree_outfile_reduced}' + '>> ERROR: empty tree file.')
 
             # computing and writing original alignment trees
             alignment_name = alignment_path.split('/')[-1]
             filename_out = os.path.join(original_dir_path, alignment_name)
             tree_outfile = filename_out[:-3] + 'tree'
             computing_and_writing_alignment_tree(alignment_path, tree_outfile)
+            if os.stat(tree_outfile).st_size == 0:
+                tree_file_name = tree_outfile.split('/')[-3:]
+                sys.exit(f'{tree_outfile}' + '>> ERROR: empty tree file.')
 
             # computing distance between ref tree and inferred trees
             noise_reduced_distance = compute_distance_between_trees(tree_outfile_reduced, reference_tree)
@@ -199,14 +223,14 @@ if __name__ == '__main__':
 
             alignment_key_name = alignment_name[:-3]
             compare_trees_dictionary[folder_dict_key_name][alignment_key_name] = (
-                original_distance, noise_reduced_distance
+                original_distance, noise_reduced_distance, round(noise_reduction_ratio, 2)
             )
 
     distance_results_path = os.path.join(result_dir, 'distance_result_dict')
     with open(distance_results_path, 'w') as result_dir_file:
         json.dump(compare_trees_dictionary, result_dir_file)
 
-    print('your data has been processed')
+    print('your data has been processed!')
 
 
 
