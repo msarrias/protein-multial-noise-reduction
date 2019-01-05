@@ -18,20 +18,26 @@ new directories for storing the reduced alignments and an empty dictionary
 with key 'main directory name' (e.g asymmetric_0.5) and which will
 later contain a nested dictionary: 
 {
-    'filename': [original_alignment_symmetric_distance, noise_reduced_alignment_symmetric_distance]
+    'filename': [
+    original_alignment_symmetric_distance,
+    noise_reduced_alignment_symmetric_distance,
+    noise_reduction_ratio_
+    ]
     ...
 }
  with 'filename' e.g: s001.align.1.msl
-and original_alignment_symmetric_distance, noise_reduced_alignment_symmetric_distance: 
+and original_alignment_symmetric_distance, noise_reduced_alignment_symmetric_distance, noise_reduction_ratio_: 
     distance of the reference tree with the original alignment tree and 
-    distance of the reference tree with the noise reduced alignment tree.
+    distance of the reference tree with the noise reduced alignment tree
+    ratio between the difference of number of columns between the original and reduced alignment and the number of rows 
+    of the original alignment.
 
 The program will start parsing through the raw data, it will first read the reference tree,
 set the keys of the dictionary and write the noise reduced alignment file using the
 perform_noise_reduction function, afterwards it will generate inferred tree files, for both:
 the raw data and the noise reduced data using the function computing_and_writing_alignment_tree.
 Lastly it will compute the distance between the reference tree and both inferred tree cases 
-(with an without noise reduction). The file names (key) and distances (key values) will be nested
+(with and without noise reduction). The file names (key), distances and ratios (key values) will be nested
 in the dictionary.
 
 The program will write a json file in the results folder containing the dictionary.
@@ -223,7 +229,7 @@ if __name__ == '__main__':
 
             alignment_key_name = alignment_name[:-3]
             compare_trees_dictionary[folder_dict_key_name][alignment_key_name] = (
-                original_distance, noise_reduced_distance, round(noise_reduction_ratio, 2)
+                original_distance, noise_reduced_distance, round(noise_reduction_ratio, 4)
             )
 
     distance_results_path = os.path.join(result_dir, 'distance_result_dict')
