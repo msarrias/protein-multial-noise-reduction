@@ -1,0 +1,5 @@
+\babel@toc {english}{}
+\contentsline {section}{Abstract}{i}{section*.1}
+\contentsline {section}{\numberline {1}Introduction}{1}{section.1}
+\contentsline {section}{\numberline {2}Results and Discussion}{1}{section.2}
+\contentsline {section}{\numberline {3}Methods and Materials}{1}{section.3}
