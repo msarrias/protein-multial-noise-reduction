@@ -1,1 +1,0 @@
-# protein_multial_noise_reduction
